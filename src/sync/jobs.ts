@@ -79,7 +79,11 @@ export async function syncGoogleCalendar() {
   // or as a file path for local development
   let credentials: any;
   if (process.env.GOOGLE_CREDENTIALS_JSON) {
-    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+    let rawJson = process.env.GOOGLE_CREDENTIALS_JSON.trim();
+    if ((rawJson.startsWith("'") && rawJson.endsWith("'")) || (rawJson.startsWith('"') && rawJson.endsWith('"'))) {
+      rawJson = rawJson.slice(1, -1).trim();
+    }
+    credentials = JSON.parse(rawJson);
   } else {
     const credentialsPath = path.resolve(process.env.GOOGLE_CREDENTIALS_PATH || "./google-credentials.json");
     if (!fs.existsSync(credentialsPath)) {
