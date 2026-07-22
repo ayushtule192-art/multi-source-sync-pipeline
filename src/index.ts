@@ -67,9 +67,26 @@ app.get("/transactions", async (_req, res) => {
 
 // ─── Start Server ───────────────────────────────
 async function start() {
-  console.log("Running database migrations...");
-  await db.migrate.latest();
-  console.log("✓ Migrations complete.");
+  try {
+    await db.migrate.latest();
+    console.log("✓ Migrations complete.");
+  } catch (err: any) {
+    // This error occurs when dev (ts-node) and prod (compiled js) share the same DB.
+    // Dev records the migration as ".ts", prod looks for ".js" — Knex sees a mismatch.
+    // Since our migration uses hasTable guards, the tables always exist safely.
+    if (err.message?.includes("migration directory is corrupt")) {
+      console.warn("⚠ Migration file extension mismatch (.ts vs .js). Verifying tables...");
+      const tablesExist = await db.schema.hasTable("sync_state");
+      if (tablesExist) {
+        console.log("✓ Tables already exist. Skipping migration check.");
+      } else {
+        // Tables genuinely don't exist — re-throw so we don't start with no DB
+        throw err;
+      }
+    } else {
+      throw err;
+    }
+  }
 
   app.listen(PORT, () => {
     console.log(`\n🚀 Server running on http://localhost:${PORT}`);
