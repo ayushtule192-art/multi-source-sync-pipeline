@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sync-pipeline
+    env: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false   # Set this manually in Render dashboard → Environment
+      - key: HUBSPOT_ACCESS_TOKEN
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_EMAIL
+        sync: false
+      # Store the contents of google-credentials.json as a single env var
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false

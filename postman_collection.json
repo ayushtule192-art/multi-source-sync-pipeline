@@ -1,0 +1,147 @@
+{
+  "info": {
+    "name": "Sync Pipeline & Metrics API",
+    "description": "Collection for testing the data sync pipeline and metrics service. Run requests in order: trigger a sync first, then verify data, then check metrics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "description": "Change to your Render URL for production testing, e.g. https://sync-pipeline.onrender.com"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "description": "Simple liveness check. Render uses this path to monitor the service. Returns {status: 'ok', timestamp: '...'}."
+          }
+        },
+        {
+          "name": "Sync Status",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sync/status",
+            "description": "Returns the last stored cursor/syncToken per source. Use this to verify that incremental sync is progressing correctly after each trigger."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sync Pipeline",
+      "item": [
+        {
+          "name": "Trigger Full Sync",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/sync/trigger",
+            "description": "Kicks off a sync across all three sources (HubSpot, Google Calendar, Stripe) in parallel using Promise.allSettled. Returns immediately with {status: 'sync_started'} — the actual sync runs in the background. Watch the server logs for real-time progress."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Records",
+      "item": [
+        {
+          "name": "All Records",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/records",
+            "description": "Returns up to 50 most recently updated records from the unified_records table. Includes both HubSpot contacts and Google Calendar events in one normalized schema."
+          }
+        },
+        {
+          "name": "HubSpot Contacts Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/records?source=hubspot",
+              "query": [{ "key": "source", "value": "hubspot" }]
+            },
+            "description": "Filter unified records by source. Use 'hubspot' for CRM contacts or 'gcal' for calendar events."
+          }
+        },
+        {
+          "name": "Google Calendar Events Only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/records?source=gcal",
+              "query": [{ "key": "source", "value": "gcal" }]
+            },
+            "description": "Returns calendar events synced from Google Calendar. Each event is normalized to the same schema as HubSpot contacts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "All Transactions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions",
+            "description": "Returns up to 50 most recent Stripe charges. Notice the 'status' field shows the canonical value (e.g. 'collected') while 'original_status' shows what Stripe actually sent (e.g. 'succeeded'). Failed charges show status='failed' and are excluded from revenue calculations."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        {
+          "name": "Total Revenue (All Time)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/metrics/total",
+            "description": "Returns total collected revenue across all sources. Only transactions with canonical status='collected' are counted — this is a strict allow-list, not an exclusion list."
+          }
+        },
+        {
+          "name": "Total Revenue (Date Range)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics/total?startDate=2024-01-01&endDate=2026-12-31",
+              "query": [
+                { "key": "startDate", "value": "2024-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            },
+            "description": "Same total revenue but filtered to a specific date range. Both startDate and endDate are optional and use YYYY-MM-DD format."
+          }
+        },
+        {
+          "name": "Revenue Breakdown (Day by Day)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/metrics/breakdown",
+            "description": "Returns revenue grouped by day. Uses the exact same base query as /metrics/total so the sum of all breakdown amounts will always equal the total. This is by design — both endpoints share one query function."
+          }
+        },
+        {
+          "name": "Revenue Breakdown (Date Range)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/metrics/breakdown?startDate=2024-01-01&endDate=2026-12-31",
+              "query": [
+                { "key": "startDate", "value": "2024-01-01" },
+                { "key": "endDate", "value": "2026-12-31" }
+              ]
+            },
+            "description": "Day-by-day breakdown filtered to a date range. Sum the breakdown values and compare with /metrics/total using the same date range — they will always match."
+          }
+        }
+      ]
+    }
+  ]
+}
