@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// When compiled to dist/, __dirname is dist/ so migrations are in dist/src/db/migrations
-// When running via ts-node, __dirname is the project root, so migrations are in src/db/migrations
+// In production (dist/), __dirname = dist/ so migrations are at dist/src/db/migrations
+// In development (ts-node), __dirname = project root so migrations are at src/db/migrations
 const migrationsDir = path.join(__dirname, "src/db/migrations");
 
 const config: { [key: string]: Knex.Config } = {
@@ -17,13 +17,15 @@ const config: { [key: string]: Knex.Config } = {
     useNullAsDefault: true,
     migrations: {
       directory: migrationsDir,
-      // Use compiled .js files in production, .ts in development
-      loadExtensions: [".js"],
+      loadExtensions: [".ts", ".js"],
     }
   },
   production: {
     client: "pg",
-    connection: process.env.DATABASE_URL,
+    connection: {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    },
     migrations: {
       directory: migrationsDir,
       loadExtensions: [".js"],
